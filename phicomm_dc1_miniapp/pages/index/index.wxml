@@ -1,0 +1,235 @@
+<view class="page">
+  <view class="top-bar">
+    <view class="brand">
+      <view class="brand-mark">DC1</view>
+      <view class="brand-copy">
+        <view class="brand-title">智能排插</view>
+        <view class="brand-sub">Phicomm 电源控制台</view>
+      </view>
+    </view>
+    <view class="top-actions">
+      <view class="live-pill {{wsConnected ? 'is-live' : 'is-idle'}}">
+        <view class="live-dot"></view>
+        {{wsConnected ? '实时' : '离线'}}
+      </view>
+      <view class="icon-chip" bindtap="toggleSettings">{{settingsOpen ? '收起' : '设置'}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{settingsOpen}}" class="card settings-card">
+    <view class="card-title">服务器设置</view>
+    <view class="card-desc">点选测试节点，或自行填写地址和端口</view>
+
+    <view class="preset-row">
+      <view
+        wx:for="{{serverPresets}}"
+        wx:key="id"
+        class="preset-chip {{selectedServerId === item.id ? 'is-active' : ''}}"
+        bindtap="selectServer"
+        data-id="{{item.id}}"
+      >{{item.name}}</view>
+      <view
+        class="preset-chip {{selectedServerId === 'custom' ? 'is-active' : ''}}"
+        bindtap="selectServer"
+        data-id="custom"
+      >自定义</view>
+    </view>
+
+    <view class="field-block">
+      <view class="label">协议</view>
+      <view class="segment">
+        <view
+          class="segment-item {{serverProtocol === 'https' ? 'is-active' : ''}}"
+          bindtap="setProtocol"
+          data-protocol="https"
+        >HTTPS</view>
+        <view
+          class="segment-item {{serverProtocol === 'http' ? 'is-active' : ''}}"
+          bindtap="setProtocol"
+          data-protocol="http"
+        >HTTP</view>
+      </view>
+    </view>
+
+    <view class="field-block">
+      <view class="label">服务器地址</view>
+      <input
+        class="field-input"
+        maxlength="-1"
+        placeholder="seo.ynggv.com 或 192.168.1.10"
+        placeholder-class="input-placeholder"
+        value="{{serverHost}}"
+        bindinput="handleHostInput"
+        bindblur="handleHostBlur"
+        adjust-position="{{true}}"
+        confirm-type="next"
+      />
+    </view>
+
+    <view class="field-block">
+      <view class="label">端口</view>
+      <input
+        class="field-input"
+        type="number"
+        maxlength="8"
+        placeholder="8123"
+        placeholder-class="input-placeholder"
+        value="{{serverPort}}"
+        bindinput="handlePortInput"
+        adjust-position="{{true}}"
+        confirm-type="next"
+      />
+    </view>
+
+    <view class="url-preview">
+      <view>接口 {{baseUrl || '--'}}</view>
+      <view>实时 {{wsUrl || '--'}}</view>
+    </view>
+
+    <view class="field-block">
+      <view class="label">Long-Lived Access Token</view>
+      <input
+        class="field-input"
+        maxlength="-1"
+        password="{{!showToken}}"
+        placeholder="粘贴完整 Token"
+        placeholder-class="input-placeholder"
+        value="{{token}}"
+        bindinput="handleTokenInput"
+        adjust-position="{{true}}"
+        confirm-type="done"
+      />
+    </view>
+
+    <view class="token-tools">
+      <view class="ghost-btn" bindtap="toggleTokenVisible">{{showToken ? '隐藏 Token' : '显示 Token'}}</view>
+      <view class="muted">{{cleanTokenLength}} 字符{{tokenHasWhitespace ? ' · 将自动去除空格' : ''}}</view>
+    </view>
+
+    <view class="btn-row">
+      <view class="primary-btn {{loading ? 'is-disabled' : ''}}" bindtap="saveConfig">
+        {{loading ? '连接中...' : '保存并连接'}}
+      </view>
+      <view class="secondary-btn" bindtap="refreshStates">刷新状态</view>
+    </view>
+
+    <view class="inline-status">
+      <view class="status-dot {{wsConnected ? 'status-on' : 'status-off'}}"></view>
+      实时监听 {{wsConnected ? '已连接' : '未连接'}}
+    </view>
+
+    <view wx:if="{{errorText}}" class="error-text">{{errorText}}</view>
+  </view>
+
+  <block wx:else>
+    <view class="server-bar" bindtap="toggleSettings">
+      <view class="server-bar-copy">
+        <view class="server-bar-label">当前服务器</view>
+        <view class="server-bar-value">{{baseUrl || '尚未配置'}}</view>
+        <view class="server-bar-ws">{{wsUrl || ''}}</view>
+      </view>
+      <view class="server-bar-action">更改</view>
+    </view>
+
+    <view wx:if="{{mainDevice}}" class="card strip-card">
+    <view class="strip-head">
+      <view
+        class="strip-title-wrap"
+        bindlongpress="openRenameDialog"
+        data-entity-id="{{mainDevice.entityId}}"
+        data-current-name="{{mainDevice.name}}"
+      >
+        <view class="strip-kicker">主控排插</view>
+        <view class="strip-title">{{mainDevice.name}}</view>
+        <view class="strip-meta">设备 {{mainDevice.deviceIp}} · 服务 {{mainDevice.serverIp}}</view>
+      </view>
+
+      <view
+        class="power-btn {{mainDevice.isOn ? 'is-on' : 'is-off'}}"
+        bindtap="onToggleMain"
+      >
+        <view class="power-ring"></view>
+        <view class="power-glyph">⏻</view>
+        <view class="power-caption">{{mainDevice.isOn ? '开' : '关'}}</view>
+      </view>
+    </view>
+
+    <view class="power-stage {{mainDevice.isOn ? 'is-on' : ''}}">
+      <view class="power-readout">
+        <view class="power-number">{{mainDevice.powerText}}</view>
+        <view class="power-unit">W</view>
+      </view>
+      <view class="power-caption-lg">实时功率 · {{mainDevice.statusText}}</view>
+      <view class="metric-row">
+        <view class="metric-tile">
+          <view class="metric-label">电压</view>
+          <view class="metric-value">{{mainDevice.voltageText}}<text class="metric-unit">V</text></view>
+        </view>
+        <view class="metric-tile">
+          <view class="metric-label">电流</view>
+          <view class="metric-value">{{mainDevice.currentText}}<text class="metric-unit">A</text></view>
+        </view>
+        <view class="metric-tile">
+          <view class="metric-label">刷新</view>
+          <view class="metric-value metric-time">{{lastUpdated || '--'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="socket-section">
+      <view class="socket-head">
+        <view class="socket-title">插孔</view>
+        <view class="muted">点按开关 · 长按改名</view>
+      </view>
+
+      <view wx:if="{{outlets.length === 0}}" class="empty-socket">暂无子插孔实体</view>
+
+      <view wx:else class="socket-grid">
+        <view
+          wx:for="{{outlets}}"
+          wx:key="entityId"
+          class="socket-card {{item.isOn ? 'is-on' : 'is-off'}}"
+          bindtap="onToggleOutlet"
+          bindlongpress="openRenameDialog"
+          data-entity-id="{{item.entityId}}"
+          data-state="{{item.isOn}}"
+          data-current-name="{{item.name}}"
+        >
+          <view class="socket-face">
+            <view class="socket-hole"></view>
+            <view class="socket-hole"></view>
+          </view>
+          <view class="socket-name">{{item.name}}</view>
+          <view class="socket-state">{{item.isOn ? '已开启' : '已关闭'}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+    <view wx:else class="card empty-card">
+      <view class="empty-icon">⌁</view>
+      <view class="empty-title">等待接入排插</view>
+      <view class="empty-desc">选择测试服务器或填写自定义地址，粘贴 Token 后即可看到实时电压、电流和三个插孔。</view>
+    </view>
+  </block>
+
+  <view wx:if="{{renameDialogVisible}}" class="dialog-mask" bindtap="closeRenameDialog">
+    <view class="dialog-card" catchtap="noop">
+      <view class="dialog-title">修改显示名称</view>
+      <view class="dialog-subtitle">只影响小程序里的展示，不会改 Home Assistant 实体 ID</view>
+      <input
+        class="dialog-input"
+        maxlength="-1"
+        placeholder="输入新的显示名称"
+        placeholder-class="input-placeholder"
+        value="{{renameInput}}"
+        bindinput="handleRenameInput"
+        adjust-position="{{true}}"
+      />
+      <view class="btn-row">
+        <view class="secondary-btn" bindtap="resetRenamedLabel">恢复默认</view>
+        <view class="primary-btn" bindtap="saveRenamedLabel">保存名称</view>
+      </view>
+    </view>
+  </view>
+</view>
