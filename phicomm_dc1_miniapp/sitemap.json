@@ -1,9 +1,0 @@
-{
-  "desc": "Phicomm DC1 控制小程序",
-  "rules": [
-    {
-      "action": "allow",
-      "page": "*"
-    }
-  ]
-}
